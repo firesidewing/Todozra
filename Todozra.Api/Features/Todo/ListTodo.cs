@@ -5,22 +5,19 @@ using Todozra.Db.Todo;
 
 namespace Todozra.Api.Features.Todo;
 
-public class ListTodo
+file class EndPoint : IEndPoint
 {
-    public class EndPoint : IEndPoint
+    public void MapEndPoint(IEndpointRouteBuilder builder)
     {
-        public void MapEndPoint(IEndpointRouteBuilder builder)
-        {
-            builder.MapGet("/api/todos", Handler);
-        }
+        builder.MapGet("/api/todos", Handler);
+    }
 
-        private static async Task<Ok<List<TodoDto>>> Handler(TodoDbContext db)
-        {
-            var ret = await db.Todos
-                .Select(x => x.ToDto())
-                .ToListAsync();
+    private static async Task<Ok<List<TodoDto>>> Handler(TodoDbContext db)
+    {
+        var ret = await db.Todos
+            .Select(x => x.ToDto())
+            .ToListAsync();
 
-            return TypedResults.Ok(ret);
-        }
+        return TypedResults.Ok(ret);
     }
 }

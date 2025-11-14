@@ -5,37 +5,34 @@ using Todozra.Db.Todo;
 
 namespace Todozra.Api.Features.Todo;
 
-public static class AddTodo
+file sealed record Request(string Title, string? Description)
 {
-    private sealed record Request(string Title, string? Description)
+    public TodoModel ToModel()
     {
-        public TodoModel ToModel()
+        return new TodoModel
         {
-            return new TodoModel
-            {
-                Title = Title,
-                Description = Description,
-                CompletedAt = null
-            };
-        }
+            Title = Title,
+            Description = Description,
+            CompletedAt = null
+        };
+    }
+}
+
+file class EndPoint : IEndPoint
+{
+    public void MapEndPoint(IEndpointRouteBuilder builder)
+    {
+        builder.MapPost("/api/todos", Handler);
     }
 
-    public class EndPoint : IEndPoint
+    private static async Task<Ok<TodoDto>> Handler(TodoDbContext db, [FromBody] Request request)
     {
-        public void MapEndPoint(IEndpointRouteBuilder builder)
-        {
-            builder.MapPost("/api/todos", Handler);
-        }
+        var model = request.ToModel();
+        model.CreatedAt = DateTime.UtcNow;
 
-        private static async Task<Ok<TodoDto>> Handler(TodoDbContext db, [FromBody] Request request)
-        {
-            var model = request.ToModel();
-            model.CreatedAt = DateTime.UtcNow;
+        await db.Todos.AddAsync(model);
+        await db.SaveChangesAsync();
 
-            await db.Todos.AddAsync(model);
-            await db.SaveChangesAsync();
-
-            return TypedResults.Ok(model.ToDto());
-        }
+        return TypedResults.Ok(model.ToDto());
     }
 }

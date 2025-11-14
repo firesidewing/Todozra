@@ -1,10 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 
+using Todozra.Api;
 using Todozra.Db.Todo;
 
 var builder = WebApplication.CreateBuilder(args);
-
-var app = builder.Build();
 
 builder.Services.AddDbContext<TodoDbContext>(options =>
 {
@@ -12,6 +11,10 @@ builder.Services.AddDbContext<TodoDbContext>(options =>
     options.UseSqlite("TodozraDb");
 });
 
+var app = builder.Build();
 
+app.MapAllEndpointsFromAssembly(typeof(IEndPoint).Assembly);
 
 app.UseHttpsRedirection();
+
+app.Run();

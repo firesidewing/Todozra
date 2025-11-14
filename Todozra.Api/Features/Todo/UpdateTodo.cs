@@ -1,31 +1,43 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 using Todozra.Db.Todo;
 
 namespace Todozra.Api.Features.Todo;
 
-public sealed class UpdateTodo
+file sealed record Request(string Title, string? Description, DateTime? CompletedAt)
 {
-    public sealed record Request(Guid Id, string Title, string? Description);
-
-    public class EndPoint : IEndPoint
+    public TodoModel Apply(TodoModel model)
     {
-        public void MapEndPoint(IEndpointRouteBuilder builder)
+        model.Title = Title;
+        model.Description = Description;
+        model.CompletedAt = CompletedAt;
+        model.UpdatedAt = DateTime.UtcNow;
+
+        return model;
+    }
+}
+
+file class EndPoint : IEndPoint
+{
+    public void MapEndPoint(IEndpointRouteBuilder builder)
+    {
+        builder.MapPost("/api/todos/{id:guid}", Handler);
+    }
+
+    private static async Task<Results<Ok<TodoDto>, NotFound>> Handler(TodoDbContext db, Guid id, [FromBody] Request request)
+    {
+        var todo = await db.Todos.FirstOrDefaultAsync(x => x.Id == id);
+
+        if (todo == null)
         {
-            builder.MapPost("/api/todos/{id:guid}", Handler);
+            return TypedResults.NotFound();
         }
 
-        private static async Task<Results<Ok<TodoDto>, NotFound>> Handler(TodoDbContext context, Guid id)
-        {
-            var todo = await context.Todos.FirstOrDefaultAsync(x => x.Id == id);
+        db.Todos.Update(request.Apply(todo));
+        await db.SaveChangesAsync();
 
-            if (todo == null)
-            {
-                return TypedResults.NotFound();
-            }
-
-            return TypedResults.Ok(todo);
-        }
+        return TypedResults.Ok(todo.ToDto());
     }
 }
