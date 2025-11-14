@@ -1,0 +1,7 @@
+﻿services:
+  todozra:
+    image: todozra
+    build:
+      context: .
+      dockerfile: Todozra/Dockerfile
+

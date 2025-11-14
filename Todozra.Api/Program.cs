@@ -8,7 +8,10 @@ var app = builder.Build();
 
 builder.Services.AddDbContext<TodoDbContext>(options =>
 {
+    options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
     options.UseSqlite("TodozraDb");
 });
+
+
 
 app.UseHttpsRedirection();

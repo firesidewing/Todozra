@@ -1,4 +1,9 @@
-﻿namespace Todozra.Api.Features.Todo;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
+
+using Todozra.Db.Todo;
+
+namespace Todozra.Api.Features.Todo;
 
 public class ListTodo
 {
@@ -9,9 +14,13 @@ public class ListTodo
             builder.MapGet("/api/todos", Handler);
         }
 
-        private async Task Handler(HttpContext context)
+        private static async Task<Ok<List<TodoDto>>> Handler(TodoDbContext db)
         {
-            throw new NotImplementedException();
+            var ret = await db.Todos
+                .Select(x => x.ToDto())
+                .ToListAsync();
+
+            return TypedResults.Ok(ret);
         }
     }
 }
