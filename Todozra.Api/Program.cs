@@ -13,7 +13,25 @@ builder.Services.AddDbContext<TodoDbContext>(options =>
 
 builder.Services.AddEndpoints(typeof(IEndPoint).Assembly);
 
+builder.Services.AddControllers();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DevCors", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("DevCors");
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -26,6 +44,8 @@ if (app.Environment.IsDevelopment())
 
 app.MapEndpoints();
 
-app.UseHttpsRedirection();
+app.MapControllers();
+app.UseStaticFiles();
+app.MapFallbackToFile("index.html");
 
 app.Run();
