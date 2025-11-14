@@ -18,7 +18,7 @@ file sealed record Request(string Title, string? Description)
     }
 }
 
-file class EndPoint : IEndPoint
+file sealed class EndPoint : IEndPoint
 {
     public void MapEndPoint(IEndpointRouteBuilder builder)
     {

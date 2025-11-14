@@ -11,9 +11,11 @@ builder.Services.AddDbContext<TodoDbContext>(options =>
     options.UseSqlite("TodozraDb");
 });
 
+builder.Services.AddEndpoints(typeof(IEndPoint).Assembly);
+
 var app = builder.Build();
 
-app.MapAllEndpointsFromAssembly(typeof(IEndPoint).Assembly);
+app.MapEndpoints();
 
 app.UseHttpsRedirection();
 

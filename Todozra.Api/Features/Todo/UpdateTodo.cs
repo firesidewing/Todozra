@@ -19,7 +19,7 @@ file sealed record Request(string Title, string? Description, DateTime? Complete
     }
 }
 
-file class EndPoint : IEndPoint
+file sealed class EndPoint : IEndPoint
 {
     public void MapEndPoint(IEndpointRouteBuilder builder)
     {

@@ -1,21 +1,46 @@
 ﻿using System.Reflection;
 
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
 namespace Todozra.Api;
 
 public static class EndpointRegistrationExtensions
 {
-    public static IEndpointRouteBuilder MapAllEndpointsFromAssembly(
-        this IEndpointRouteBuilder builder,
+    public static IServiceCollection AddEndpoints(
+        this IServiceCollection services,
         Assembly assembly)
     {
-        foreach (var type in assembly.DefinedTypes.Where(type => !type.IsAbstract && typeof(IEndPoint).IsAssignableFrom(type)))
+        var endpointTypes = assembly
+            .DefinedTypes
+            .Where(t =>
+                !t.IsAbstract &&
+                !t.IsInterface &&
+                typeof(IEndPoint).IsAssignableFrom(t));
+
+        var descriptors = endpointTypes
+            .Select(t => ServiceDescriptor.Transient(typeof(IEndPoint), t.AsType()))
+            .ToArray();
+
+        services.TryAddEnumerable(descriptors);
+
+        return services;
+    }
+
+    public static IApplicationBuilder MapEndpoints(
+        this WebApplication app,
+        RouteGroupBuilder? routeGroupBuilder = null)
+    {
+        var endpoints = app.Services.GetRequiredService<IEnumerable<IEndPoint>>();
+        IEndpointRouteBuilder builder = routeGroupBuilder is null
+            ? app
+            : routeGroupBuilder;
+
+        foreach (var endpoint in endpoints)
         {
-            if (Activator.CreateInstance(type.AsType(), nonPublic: true) is IEndPoint endpoint)
-            {
-                endpoint.MapEndPoint(builder);
-            }
+            endpoint.MapEndPoint(builder);
         }
 
-        return builder;
+        return app;
     }
+
 }

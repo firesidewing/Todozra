@@ -5,7 +5,7 @@ using Todozra.Db.Todo;
 
 namespace Todozra.Api.Features.Todo;
 
-file class EndPoint : IEndPoint
+file sealed class EndPoint : IEndPoint
 {
     public void MapEndPoint(IEndpointRouteBuilder builder)
     {
