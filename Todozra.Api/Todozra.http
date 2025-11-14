@@ -1,6 +1,0 @@
-@Todozra_HostAddress = http://localhost:5202
-
-GET {{Todozra_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
