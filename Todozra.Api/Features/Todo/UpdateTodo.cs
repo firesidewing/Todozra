@@ -26,13 +26,19 @@ file sealed class EndPoint : IEndPoint
         builder.MapPost("/api/todos/{id:guid}", Handler);
     }
 
-    private static async Task<Results<Ok<TodoDto>, NotFound>> Handler(TodoDbContext db, Guid id, [FromBody] Request request)
+    private static async Task<Results<Ok<TodoDto>, NotFound, ValidationProblem>> Handler(TodoDbContext db, Guid id, [FromBody] Request request)
     {
         var todo = await db.Todos.FirstOrDefaultAsync(x => x.Id == id);
 
         if (todo == null)
         {
             return TypedResults.NotFound();
+        }
+
+        var errors = request.Apply(todo).Validate();
+        if (errors.Count > 0)
+        {
+            return TypedResults.ValidationProblem(errors.ToValidationErrors());
         }
 
         db.Todos.Update(request.Apply(todo));

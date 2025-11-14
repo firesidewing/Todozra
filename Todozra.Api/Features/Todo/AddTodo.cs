@@ -25,14 +25,20 @@ file sealed class EndPoint : IEndPoint
         builder.MapPost("/api/todos", Handler);
     }
 
-    private static async Task<Ok<TodoDto>> Handler(TodoDbContext db, [FromBody] Request request)
+    private static async Task<Results<Ok<TodoDto>, ValidationProblem>> Handler(TodoDbContext db, [FromBody] Request request)
     {
-        var model = request.ToModel();
-        model.CreatedAt = DateTime.UtcNow;
+        var todo = request.ToModel();
+        todo.CreatedAt = DateTime.UtcNow;
 
-        await db.Todos.AddAsync(model);
+        var errors = todo.Validate();
+        if (errors.Count > 0)
+        {
+            return TypedResults.ValidationProblem(errors.ToValidationErrors());
+        }
+
+        await db.Todos.AddAsync(todo);
         await db.SaveChangesAsync();
 
-        return TypedResults.Ok(model.ToDto());
+        return TypedResults.Ok(todo.ToDto());
     }
 }
