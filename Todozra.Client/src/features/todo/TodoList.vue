@@ -177,7 +177,7 @@ const closeDrawer = () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-[#0F0E0D] py-8 px-4 sm:px-6 lg:px-8">
+    <div class="min-h-screen bg-[#0F0E0D] py-8 pb-24 px-4 sm:px-6 lg:px-8">
         <div class="max-w-3xl mx-auto">
             <h1 class="text-3xl font-bold text-[#E7E5E4] mb-8">My Todos</h1>
 
