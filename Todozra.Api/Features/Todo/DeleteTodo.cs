@@ -12,12 +12,15 @@ file sealed class EndPoint : IEndPoint
         builder.MapDelete("/api/todos/{id:guid}", Handler);
     }
 
-    private static async Task<Results<NoContent, NotFound>> Handler(TodoDbContext context, Guid id)
+    private static async Task<Results<NoContent, NotFound>> Handler(TodoDbContext context, ILogger<EndPoint> logger, Guid id)
     {
+        logger.LogInformation("Handling delete request for todo with id: {Id}", id);
+
         var todo = await context.Todos.FirstOrDefaultAsync(x => x.Id == id && x.DeletedAt == null);
 
         if (todo == null)
         {
+            logger.LogWarning("Todo not found {Id}", id);
             return TypedResults.NotFound();
         }
 

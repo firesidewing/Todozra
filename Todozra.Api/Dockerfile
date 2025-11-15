@@ -11,18 +11,18 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy and restore backend
-COPY ["Todozra/Todozra.csproj", "Todozra/"]
-RUN dotnet restore "Todozra/Todozra.csproj"
+COPY ["Todozra.Api/Todozra.Api.csproj", "Todozra.Api/"]
+RUN dotnet restore "Todozra.Api/Todozra.Api.csproj"
 
 # Copy everything (backend + frontend source)
 COPY . .
-WORKDIR "/src/Todozra"
-RUN dotnet build "./Todozra.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/Todozra.Api"
+RUN dotnet build "./Todozra.Api.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # Backend publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Todozra.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Todozra.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Frontend build stage (Vue + Bun)
 # Adjust the path "Todozra.Client" to your actual frontend folder name
@@ -37,6 +37,7 @@ COPY Todozra.Client ./Todozra.Client
 
 WORKDIR /src/Todozra.Client
 RUN bun install
+ENV DOCKER_BUILD=true
 RUN bun run build
 
 # Final runtime image
@@ -50,4 +51,4 @@ COPY --from=publish /app/publish .
 # If your Vite outDir is different, adjust this path.
 COPY --from=frontend-build /src/Todozra.Client/dist ./wwwroot
 
-ENTRYPOINT ["dotnet", "Todozra.dll"]
+ENTRYPOINT ["dotnet", "Todozra.Api.dll"]

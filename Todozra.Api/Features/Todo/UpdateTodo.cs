@@ -21,16 +21,19 @@ file sealed record Request(string Title, string? Description, DateTime? Complete
 
 file sealed class EndPoint : IEndPoint
 {
-    public void MapEndPoint(IEndpointRouteBuilder builder)
-    {
-        builder.MapPost("/api/todos/{id:guid}", Handler);
-    }
+    public void MapEndPoint(IEndpointRouteBuilder builder) { builder.MapPost("/api/todos/{id:guid}", Handler); }
 
-    private static async Task<Results<Ok<TodoDto>, NotFound, ValidationProblem>> Handler(TodoDbContext db, Guid id, [FromBody] Request request)
+    private static async Task<Results<Ok<TodoDto>, NotFound, ValidationProblem>> Handler(TodoDbContext db,
+        ILogger<EndPoint> logger,
+        Guid id,
+        [FromBody] Request request)
     {
+        logger.LogInformation("Handling request");
+
         var todo = await db.Todos.FirstOrDefaultAsync(x => x.Id == id);
         if (todo == null)
         {
+            logger.LogWarning("Todo not found {Id}", id);
             return TypedResults.NotFound();
         }
 
@@ -39,6 +42,7 @@ file sealed class EndPoint : IEndPoint
             .Validate();
         if (errors.Count > 0)
         {
+            logger.LogWarning("Validation errors: {@Errors}", errors.Select(x => x.Message));
             return TypedResults.ValidationProblem(errors.ToValidationErrors());
         }
 

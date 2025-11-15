@@ -13,8 +13,7 @@ public static class EndpointRegistrationExtensions
         var endpointTypes = assembly
             .DefinedTypes
             .Where(t =>
-                !t.IsAbstract &&
-                !t.IsInterface &&
+                t is { IsAbstract: false, IsInterface: false } &&
                 typeof(IEndPoint).IsAssignableFrom(t));
 
         var descriptors = endpointTypes

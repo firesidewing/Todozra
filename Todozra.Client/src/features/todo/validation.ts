@@ -64,7 +64,7 @@ export function validate(data: TodoFormData): TodoValidationResult {
     if (!fieldErrors[error.field]) {
       fieldErrors[error.field] = [];
     }
-    fieldErrors[error.field].push(error.message);
+    fieldErrors[error.field]!.push(error.message);
   });
 
   return {

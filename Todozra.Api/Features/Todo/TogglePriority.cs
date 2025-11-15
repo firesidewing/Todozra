@@ -12,12 +12,15 @@ file sealed class EndPoint : IEndPoint
         builder.MapPost("/api/todos/{id:guid}/priority", Handler);
     }
 
-    private static async Task<Results<Ok<TodoDto>, NotFound>> Handler(TodoDbContext context, Guid id)
+    private static async Task<Results<Ok<TodoDto>, NotFound>> Handler(TodoDbContext context,
+        ILogger<EndPoint> logger,
+        Guid id)
     {
         var todo = await context.Todos.FirstOrDefaultAsync(x => x.Id == id && x.DeletedAt == null);
 
         if (todo == null)
         {
+            logger.LogWarning("Todo not found {Id}", id);
             return TypedResults.NotFound();
         }
 

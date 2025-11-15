@@ -9,24 +9,20 @@ file sealed record Request(string Title, string? Description)
 {
     public TodoModel ToModel()
     {
-        return new TodoModel
-        {
-            Title = Title,
-            Description = Description,
-            CompletedAt = null
-        };
+        return new TodoModel { Title = Title, Description = Description, CompletedAt = null };
     }
 }
 
-file sealed class EndPoint : IEndPoint
+file sealed partial class EndPoint : IEndPoint
 {
-    public void MapEndPoint(IEndpointRouteBuilder builder)
-    {
-        builder.MapPost("/api/todos", Handler);
-    }
+    public void MapEndPoint(IEndpointRouteBuilder builder) { builder.MapPost("/api/todos", Handler); }
 
-    private static async Task<Results<Ok<TodoDto>, ValidationProblem>> Handler(TodoDbContext db, [FromBody] Request request)
+    private static async Task<Results<Ok<TodoDto>, ValidationProblem>> Handler(TodoDbContext db,
+        ILogger<EndPoint> logger,
+        [FromBody] Request request)
     {
+        logger.LogInformation("Handling request");
+
         var todo = request.ToModel();
         todo.CreatedAt = DateTime.UtcNow;
         todo.UpdatedAt = DateTime.UtcNow;
@@ -34,6 +30,7 @@ file sealed class EndPoint : IEndPoint
         var errors = todo.Validate();
         if (errors.Count > 0)
         {
+            logger.LogWarning("Validation errors: {@Errors}", errors.Select(x => x.Message));
             return TypedResults.ValidationProblem(errors.ToValidationErrors());
         }
 

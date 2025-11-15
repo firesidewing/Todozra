@@ -15,6 +15,6 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../Todozra.Api/wwwroot'
+    outDir: process.env.DOCKER_BUILD ? 'dist' : '../Todozra.Api/wwwroot'
   }
 });
