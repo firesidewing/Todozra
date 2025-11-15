@@ -18,10 +18,10 @@ public sealed class TodoDbContext(DbContextOptions<TodoDbContext> options) : DbC
 
             entity.Property(t => t.Title)
                 .IsRequired()
-                .HasMaxLength(200);
+                .HasMaxLength(TodoValidator.TitleMaxLength);
 
             entity.Property(t => t.Description)
-                .HasMaxLength(2000);
+                .HasMaxLength(TodoValidator.DescriptionMaxLength);
         });
     }
 }

@@ -22,22 +22,12 @@ public static class TodoValidator
         {
             ValidateTitleRequired,
             ValidateTitleMaxLength,
-            ValidateDescriptionMaxLength,
-            ValidateCompletedNotBeforeCreated,
-            ValidateCreatedNotInFuture,
-            ValidateUpdatedNotBeforeCreated
+            ValidateDescriptionMaxLength
         };
 
     public static IReadOnlyList<TodoValidationError> Validate(this TodoModel todo)
     {
-        var errors = new List<TodoValidationError>();
-
-        foreach (var rule in Rules)
-        {
-            errors.AddRange(rule(todo));
-        }
-
-        return errors;
+        return Rules.SelectMany(x => x(todo)).ToList().AsReadOnly();
     }
 
     public static IEnumerable<KeyValuePair<string, string[]>> ToValidationErrors(
@@ -60,7 +50,7 @@ public static class TodoValidator
         }
     }
 
-    private const int TitleMaxLength = 200;
+    public const int TitleMaxLength = 200;
     private static IEnumerable<TodoValidationError> ValidateTitleMaxLength(TodoModel todo)
     {
         if (!string.IsNullOrEmpty(todo.Title) && todo.Title.Length > TitleMaxLength)
@@ -72,7 +62,7 @@ public static class TodoValidator
         }
     }
 
-    private const int DescriptionMaxLength = 4000;
+    public const int DescriptionMaxLength = 2000;
     private static IEnumerable<TodoValidationError> ValidateDescriptionMaxLength(TodoModel todo)
     {
         if (!string.IsNullOrEmpty(todo.Description) && todo.Description.Length > DescriptionMaxLength)
@@ -81,40 +71,6 @@ public static class TodoValidator
                 Code: "DescriptionTooLong",
                 Message: $"Description must be at most {DescriptionMaxLength} characters.",
                 Field: nameof(TodoModel.Description));
-        }
-    }
-
-    private static IEnumerable<TodoValidationError> ValidateCompletedNotBeforeCreated(TodoModel todo)
-    {
-        if (todo.CompletedAt is { } completed &&
-            completed < todo.CreatedAt)
-        {
-            yield return new TodoValidationError(
-                Code: "CompletedBeforeCreated",
-                Message: "CompletedAt cannot be before CreatedAt.",
-                Field: nameof(TodoModel.CompletedAt));
-        }
-    }
-
-    private static IEnumerable<TodoValidationError> ValidateCreatedNotInFuture(TodoModel todo)
-    {
-        if (todo.CreatedAt > DateTime.UtcNow)
-        {
-            yield return new TodoValidationError(
-                Code: "CreatedInFuture",
-                Message: "CreatedAt cannot be in the future.",
-                Field: nameof(TodoModel.CreatedAt));
-        }
-    }
-
-    private static IEnumerable<TodoValidationError> ValidateUpdatedNotBeforeCreated(TodoModel todo)
-    {
-        if (todo.UpdatedAt < todo.CreatedAt)
-        {
-            yield return new TodoValidationError(
-                Code: "UpdatedBeforeCreated",
-                Message: "UpdatedAt cannot be before CreatedAt.",
-                Field: nameof(TodoModel.UpdatedAt));
         }
     }
 }

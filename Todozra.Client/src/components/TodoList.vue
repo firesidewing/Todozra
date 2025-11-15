@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
-import { todosApi, type CreateTodoRequest } from "../api/todos";
+import {
+    todosApi,
+    type CreateTodoRequest,
+    isTodoValidationError,
+} from "../api/todos";
 import TodoCard from "./TodoCard.vue";
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { TodoValidator, TODO_VALIDATION } from "../validation/todoValidation";
 
 const queryClient = useQueryClient();
 
@@ -35,28 +40,92 @@ const createMutation = useMutation({
         queryClient.invalidateQueries({ queryKey: ["todos"] });
         newTodoTitle.value = "";
         newTodoDescription.value = "";
+        clientFieldErrors.value = {};
+        serverFieldErrors.value = {};
+        touched.value = { title: false, description: false };
+    },
+    onError: (err: unknown) => {
+        if (isTodoValidationError(err)) {
+            serverFieldErrors.value = err.fieldErrors;
+        }
     },
 });
 
 const newTodoTitle = ref("");
 const newTodoDescription = ref("");
-const titleError = ref("");
+const touched = ref({ title: false, description: false });
 
-const validateTitle = () => {
-    if (!newTodoTitle.value.trim()) {
-        titleError.value = "Title is required";
-        return false;
+const clientFieldErrors = ref<Record<string, string[]>>({});
+const serverFieldErrors = ref<Record<string, string[]>>({});
+
+const validateField = (field: "title" | "description") => {
+    if (field === "title") {
+        const errors = TodoValidator.validateTitle(newTodoTitle.value);
+        if (errors.length > 0) {
+            clientFieldErrors.value.Title = errors.map((e) => e.message);
+        } else {
+            delete clientFieldErrors.value.Title;
+        }
+    } else if (field === "description") {
+        const errors = TodoValidator.validateDescription(
+            newTodoDescription.value,
+        );
+        if (errors.length > 0) {
+            clientFieldErrors.value.Description = errors.map((e) => e.message);
+        } else {
+            delete clientFieldErrors.value.Description;
+        }
     }
-    if (newTodoTitle.value.length > 200) {
-        titleError.value = "Title must be less than 200 characters";
-        return false;
-    }
-    titleError.value = "";
-    return true;
 };
 
+const handleTitleInput = () => {
+    if (touched.value.title) {
+        validateField("title");
+        serverFieldErrors.value = {};
+    }
+};
+
+const handleTitleBlur = () => {
+    touched.value.title = true;
+    validateField("title");
+};
+
+const handleDescriptionInput = () => {
+    if (touched.value.description) {
+        validateField("description");
+        serverFieldErrors.value = {};
+    }
+};
+
+const handleDescriptionBlur = () => {
+    touched.value.description = true;
+    validateField("description");
+};
+
+const titleErrors = computed(() => {
+    return serverFieldErrors.value.Title || clientFieldErrors.value.Title || [];
+});
+
+const descriptionErrors = computed(() => {
+    return (
+        serverFieldErrors.value.Description ||
+        clientFieldErrors.value.Description ||
+        []
+    );
+});
+
 const handleCreateTodo = () => {
-    if (!validateTitle()) return;
+    touched.value = { title: true, description: true };
+
+    const result = TodoValidator.validate({
+        title: newTodoTitle.value,
+        description: newTodoDescription.value,
+    });
+
+    if (!result.isValid) {
+        clientFieldErrors.value = result.fieldErrors;
+        return;
+    }
 
     const data: CreateTodoRequest = {
         title: newTodoTitle.value.trim(),
@@ -91,20 +160,42 @@ const handleToggleComplete = (id: string, completed: boolean) => {
                         <input
                             id="title"
                             v-model="newTodoTitle"
-                            @input="titleError && validateTitle()"
+                            @input="handleTitleInput"
+                            @blur="handleTitleBlur"
                             type="text"
-                            class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            :maxlength="TODO_VALIDATION.TITLE_MAX_LENGTH"
+                            class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors"
                             :class="
-                                titleError
-                                    ? 'border-red-500'
-                                    : 'border-gray-300'
+                                titleErrors.length > 0
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-gray-300 focus:ring-blue-500'
                             "
                             placeholder="What needs to be done?"
                             :disabled="createMutation.isPending.value"
                         />
-                        <p v-if="titleError" class="mt-1 text-sm text-red-600">
-                            {{ titleError }}
-                        </p>
+                        <div class="flex justify-between items-start mt-1">
+                            <div class="flex-1">
+                                <p
+                                    v-for="(msg, idx) in titleErrors"
+                                    :key="idx"
+                                    class="text-sm text-red-600"
+                                >
+                                    {{ msg }}
+                                </p>
+                            </div>
+                            <span
+                                class="text-xs text-gray-500 ml-2"
+                                :class="
+                                    newTodoTitle.length >
+                                    TODO_VALIDATION.TITLE_MAX_LENGTH * 0.9
+                                        ? 'text-orange-500 font-medium'
+                                        : ''
+                                "
+                            >
+                                {{ newTodoTitle.length }} /
+                                {{ TODO_VALIDATION.TITLE_MAX_LENGTH }}
+                            </span>
+                        </div>
                     </div>
 
                     <div>
@@ -117,11 +208,42 @@ const handleToggleComplete = (id: string, completed: boolean) => {
                         <textarea
                             id="description"
                             v-model="newTodoDescription"
+                            @input="handleDescriptionInput"
+                            @blur="handleDescriptionBlur"
                             rows="3"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            :maxlength="TODO_VALIDATION.DESCRIPTION_MAX_LENGTH"
+                            class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors"
+                            :class="
+                                descriptionErrors.length > 0
+                                    ? 'border-red-500 focus:ring-red-500'
+                                    : 'border-gray-300 focus:ring-blue-500'
+                            "
                             placeholder="Additional details..."
                             :disabled="createMutation.isPending.value"
                         />
+                        <div class="flex justify-between items-start mt-1">
+                            <div class="flex-1">
+                                <p
+                                    v-for="(msg, idx) in descriptionErrors"
+                                    :key="idx"
+                                    class="text-sm text-red-600"
+                                >
+                                    {{ msg }}
+                                </p>
+                            </div>
+                            <span
+                                class="text-xs text-gray-500 ml-2"
+                                :class="
+                                    newTodoDescription.length >
+                                    TODO_VALIDATION.DESCRIPTION_MAX_LENGTH * 0.9
+                                        ? 'text-orange-500 font-medium'
+                                        : ''
+                                "
+                            >
+                                {{ newTodoDescription.length }} /
+                                {{ TODO_VALIDATION.DESCRIPTION_MAX_LENGTH }}
+                            </span>
+                        </div>
                     </div>
 
                     <button
@@ -135,13 +257,6 @@ const handleToggleComplete = (id: string, completed: boolean) => {
                                 : "Add Todo"
                         }}
                     </button>
-
-                    <p
-                        v-if="createMutation.isError.value"
-                        class="text-sm text-red-600"
-                    >
-                        Error: {{ createMutation.error.value?.message }}
-                    </p>
                 </form>
             </div>
 
