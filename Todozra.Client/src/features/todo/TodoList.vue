@@ -1,15 +1,10 @@
 <script setup lang="ts">
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import TodoCard from "./TodoCard.vue";
+import TodoForm from "./TodoForm.vue";
 import { ref, computed } from "vue";
 import { todosApi, isTodoValidationError } from "./todos";
 import type { CreateTodoRequest } from "./types";
-import {
-    validateTitle,
-    validateDescription,
-    validate,
-    todoValidation,
-} from "./validation";
 
 const queryClient = useQueryClient();
 
@@ -65,15 +60,19 @@ const deleteMutation = useMutation({
     },
 });
 
+const isDrawerOpen = ref(false);
+const todoFormRefDesktop = ref<InstanceType<typeof TodoForm>>();
+const todoFormRefDrawer = ref<InstanceType<typeof TodoForm>>();
+const serverFieldErrors = ref<Record<string, string[]>>({});
+
 const createMutation = useMutation({
     mutationFn: todosApi.create,
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["todos"] });
-        newTodoTitle.value = "";
-        newTodoDescription.value = "";
-        clientFieldErrors.value = {};
+        todoFormRefDesktop.value?.reset();
+        todoFormRefDrawer.value?.reset();
         serverFieldErrors.value = {};
-        touched.value = { title: false, description: false };
+        isDrawerOpen.value = false;
     },
     onError: (err: unknown) => {
         if (isTodoValidationError(err)) {
@@ -82,83 +81,10 @@ const createMutation = useMutation({
     },
 });
 
-const newTodoTitle = ref("");
-const newTodoDescription = ref("");
-const touched = ref({ title: false, description: false });
-
-const clientFieldErrors = ref<Record<string, string[]>>({});
-const serverFieldErrors = ref<Record<string, string[]>>({});
-
-const validateField = (field: "title" | "description") => {
-    if (field === "title") {
-        const errors = validateTitle(newTodoTitle.value);
-        if (errors.length > 0) {
-            clientFieldErrors.value.Title = errors.map((e) => e.message);
-        } else {
-            delete clientFieldErrors.value.Title;
-        }
-    } else if (field === "description") {
-        const errors = validateDescription(newTodoDescription.value);
-        if (errors.length > 0) {
-            clientFieldErrors.value.Description = errors.map((e) => e.message);
-        } else {
-            delete clientFieldErrors.value.Description;
-        }
-    }
-};
-
-const handleTitleInput = () => {
-    if (touched.value.title) {
-        validateField("title");
-        serverFieldErrors.value = {};
-    }
-};
-
-const handleTitleBlur = () => {
-    touched.value.title = true;
-    validateField("title");
-};
-
-const handleDescriptionInput = () => {
-    if (touched.value.description) {
-        validateField("description");
-        serverFieldErrors.value = {};
-    }
-};
-
-const handleDescriptionBlur = () => {
-    touched.value.description = true;
-    validateField("description");
-};
-
-const titleErrors = computed(() => {
-    return serverFieldErrors.value.Title || clientFieldErrors.value.Title || [];
-});
-
-const descriptionErrors = computed(() => {
-    return (
-        serverFieldErrors.value.Description ||
-        clientFieldErrors.value.Description ||
-        []
-    );
-});
-
-const handleCreateTodo = () => {
-    touched.value = { title: true, description: true };
-
-    const result = validate({
-        title: newTodoTitle.value,
-        description: newTodoDescription.value,
-    });
-
-    if (!result.isValid) {
-        clientFieldErrors.value = result.fieldErrors;
-        return;
-    }
-
+const handleCreateTodo = (title: string, description: string | undefined) => {
     const data: CreateTodoRequest = {
-        title: newTodoTitle.value.trim(),
-        description: newTodoDescription.value.trim() || undefined,
+        title,
+        description,
     };
 
     createMutation.mutate(data);
@@ -191,9 +117,8 @@ const handleTogglePriority = (id: string) => {
     priorityMutation.mutate(id);
 };
 
-// Filter/Search/Sort state
 const searchQuery = ref("");
-const filterStatus = ref<"all" | "active" | "completed">("all");
+const filterStatus = ref<"all" | "active" | "completed">("active");
 const sortBy = ref<"created" | "title">("created");
 
 const filteredAndSortedTodos = computed(() => {
@@ -201,7 +126,6 @@ const filteredAndSortedTodos = computed(() => {
 
     let result = [...todos.value];
 
-    // Filter by search query
     if (searchQuery.value.trim()) {
         const query = searchQuery.value.toLowerCase();
         result = result.filter(
@@ -211,20 +135,16 @@ const filteredAndSortedTodos = computed(() => {
         );
     }
 
-    // Filter by status
     if (filterStatus.value === "active") {
         result = result.filter((todo) => !todo.completedAt);
     } else if (filterStatus.value === "completed") {
         result = result.filter((todo) => !!todo.completedAt);
     }
 
-    // Sort by priority first, then by selected sort order
     result.sort((a, b) => {
-        // Priority todos always come first
         if (a.isPriority && !b.isPriority) return -1;
         if (!a.isPriority && b.isPriority) return 1;
 
-        // If both have same priority status, sort by selected order
         if (sortBy.value === "title") {
             return a.title.localeCompare(b.title);
         } else {
@@ -246,6 +166,14 @@ const todoCounts = computed(() => {
         completed: todos.value.filter((t) => !!t.completedAt).length,
     };
 });
+
+const openDrawer = () => {
+    isDrawerOpen.value = true;
+};
+
+const closeDrawer = () => {
+    isDrawerOpen.value = false;
+};
 </script>
 
 <template>
@@ -254,123 +182,19 @@ const todoCounts = computed(() => {
             <h1 class="text-3xl font-bold text-[#E7E5E4] mb-8">My Todos</h1>
 
             <div
-                class="bg-[#1C1917] rounded-lg shadow-md p-6 mb-8 border border-[#292524]"
+                class="bg-[#1C1917] rounded-lg shadow-md p-6 mb-8 border border-[#292524] hidden md:block"
             >
                 <h2 class="text-xl font-semibold text-[#E7E5E4] mb-4">
                     Add New Todo
                 </h2>
-                <form @submit.prevent="handleCreateTodo" class="space-y-4">
-                    <div>
-                        <label
-                            for="title"
-                            class="block text-sm font-medium text-[#E7E5E4] mb-1"
-                        >
-                            Title <span class="text-[#EF4444]">*</span>
-                        </label>
-                        <input
-                            id="title"
-                            v-model="newTodoTitle"
-                            @input="handleTitleInput"
-                            @blur="handleTitleBlur"
-                            type="text"
-                            :maxlength="todoValidation.TITLE_MAX_LENGTH"
-                            class="w-full px-3 py-2 bg-[#292524] border rounded-md text-[#E7E5E4] placeholder-[#78716C] focus:outline-none focus:ring-2 transition-colors"
-                            :class="
-                                titleErrors.length > 0
-                                    ? 'border-[#EF4444] focus:ring-[#EF4444]'
-                                    : 'border-[#57534E] focus:ring-[#87C7A1]'
-                            "
-                            placeholder="What needs to be done?"
-                            :disabled="createMutation.isPending.value"
-                        />
-                        <div class="flex justify-between items-start mt-1">
-                            <div class="flex-1">
-                                <p
-                                    v-for="(msg, idx) in titleErrors"
-                                    :key="idx"
-                                    class="text-sm text-[#EF4444]"
-                                >
-                                    {{ msg }}
-                                </p>
-                            </div>
-                            <span
-                                class="text-xs text-[#78716C] ml-2"
-                                :class="
-                                    newTodoTitle.length >
-                                    todoValidation.TITLE_MAX_LENGTH * 0.9
-                                        ? 'text-[#F97316] font-medium'
-                                        : ''
-                                "
-                            >
-                                {{ newTodoTitle.length }} /
-                                {{ todoValidation.TITLE_MAX_LENGTH }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label
-                            for="description"
-                            class="block text-sm font-medium text-[#E7E5E4] mb-1"
-                        >
-                            Description
-                        </label>
-                        <textarea
-                            id="description"
-                            v-model="newTodoDescription"
-                            @input="handleDescriptionInput"
-                            @blur="handleDescriptionBlur"
-                            rows="3"
-                            :maxlength="todoValidation.DESCRIPTION_MAX_LENGTH"
-                            class="w-full px-3 py-2 bg-[#292524] border rounded-md text-[#E7E5E4] placeholder-[#78716C] focus:outline-none focus:ring-2 transition-colors"
-                            :class="
-                                descriptionErrors.length > 0
-                                    ? 'border-[#EF4444] focus:ring-[#EF4444]'
-                                    : 'border-[#57534E] focus:ring-[#87C7A1]'
-                            "
-                            placeholder="Additional details..."
-                            :disabled="createMutation.isPending.value"
-                        />
-                        <div class="flex justify-between items-start mt-1">
-                            <div class="flex-1">
-                                <p
-                                    v-for="(msg, idx) in descriptionErrors"
-                                    :key="idx"
-                                    class="text-sm text-[#EF4444]"
-                                >
-                                    {{ msg }}
-                                </p>
-                            </div>
-                            <span
-                                class="text-xs text-[#78716C] ml-2"
-                                :class="
-                                    newTodoDescription.length >
-                                    todoValidation.DESCRIPTION_MAX_LENGTH * 0.9
-                                        ? 'text-[#F97316] font-medium'
-                                        : ''
-                                "
-                            >
-                                {{ newTodoDescription.length }} /
-                                {{ todoValidation.DESCRIPTION_MAX_LENGTH }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        :disabled="createMutation.isPending.value"
-                        class="w-full sm:w-auto px-6 py-2 bg-[#5C7F67] text-white font-medium rounded-md hover:bg-[#87C7A1] focus:outline-none focus:ring-2 focus:ring-[#87C7A1] focus:ring-offset-2 focus:ring-offset-[#1C1917] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
-                    >
-                        {{
-                            createMutation.isPending.value
-                                ? "Adding..."
-                                : "Add Todo"
-                        }}
-                    </button>
-                </form>
+                <TodoForm
+                    ref="todoFormRefDesktop"
+                    :on-submit="handleCreateTodo"
+                    :is-pending="createMutation.isPending.value"
+                    :server-field-errors="serverFieldErrors"
+                />
             </div>
 
-            <!-- Filter/Search/Sort Controls -->
             <div
                 v-if="!isLoading && todos && todos.length > 0"
                 class="bg-[#1C1917] rounded-lg shadow-md p-4 mb-4 border border-[#292524]"
@@ -386,7 +210,6 @@ const todoCounts = computed(() => {
                         />
                     </div>
 
-                    <!-- Filter -->
                     <div class="flex gap-2">
                         <button
                             @click="filterStatus = 'all'"
@@ -423,7 +246,6 @@ const todoCounts = computed(() => {
                         </button>
                     </div>
 
-                    <!-- Sort -->
                     <div>
                         <select
                             v-model="sortBy"
@@ -537,5 +359,96 @@ const todoCounts = computed(() => {
                 </p>
             </div>
         </div>
+
+        <button
+            @click="openDrawer"
+            class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-[#5C7F67] text-white rounded-full shadow-lg hover:bg-[#87C7A1] focus:outline-none focus:ring-4 focus:ring-[#5C7F67] focus:ring-opacity-50 transition-all duration-200 flex items-center justify-center z-40"
+        >
+            <svg
+                class="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"
+                />
+            </svg>
+        </button>
+
+        <Transition name="drawer">
+            <div
+                v-if="isDrawerOpen"
+                class="md:hidden fixed inset-0 z-50"
+                @click="closeDrawer"
+            >
+                <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+
+                <div
+                    @click.stop
+                    class="absolute bottom-0 left-0 right-0 bg-[#1C1917] rounded-t-2xl shadow-2xl border-t border-[#292524] max-h-[85vh] overflow-y-auto"
+                >
+                    <div
+                        class="sticky top-0 bg-[#1C1917] border-b border-[#292524] px-6 py-4 flex items-center justify-between"
+                    >
+                        <h2 class="text-xl font-semibold text-[#E7E5E4]">
+                            Add New Todo
+                        </h2>
+                        <button
+                            @click="closeDrawer"
+                            class="p-2 text-[#A8A29E] hover:text-[#E7E5E4] hover:bg-[#292524] rounded-lg transition-colors"
+                        >
+                            <svg
+                                class="w-6 h-6"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="p-6">
+                        <TodoForm
+                            ref="todoFormRefDrawer"
+                            :on-submit="handleCreateTodo"
+                            :is-pending="createMutation.isPending.value"
+                            :server-field-errors="serverFieldErrors"
+                        />
+                    </div>
+                </div>
+            </div>
+        </Transition>
     </div>
 </template>
+
+<style scoped>
+.drawer-enter-active,
+.drawer-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.drawer-enter-active > div:last-child,
+.drawer-leave-active > div:last-child {
+    transition: transform 0.3s ease;
+}
+
+.drawer-enter-from,
+.drawer-leave-to {
+    opacity: 0;
+}
+
+.drawer-enter-from > div:last-child,
+.drawer-leave-to > div:last-child {
+    transform: translateY(100%);
+}
+</style>
