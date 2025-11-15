@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
-import {
-    todosApi,
-    type CreateTodoRequest,
-    isTodoValidationError,
-} from "../api/todos";
 import TodoCard from "./TodoCard.vue";
 import { ref, computed } from "vue";
-import { TodoValidator, TODO_VALIDATION } from "../validation/todoValidation";
+import { todosApi, isTodoValidationError } from "./todos";
+import type { CreateTodoRequest } from "./types";
+import {
+    validateTitle,
+    validateDescription,
+    validate,
+    todoValidation,
+} from "./validation";
 
 const queryClient = useQueryClient();
 
@@ -60,16 +62,14 @@ const serverFieldErrors = ref<Record<string, string[]>>({});
 
 const validateField = (field: "title" | "description") => {
     if (field === "title") {
-        const errors = TodoValidator.validateTitle(newTodoTitle.value);
+        const errors = validateTitle(newTodoTitle.value);
         if (errors.length > 0) {
             clientFieldErrors.value.Title = errors.map((e) => e.message);
         } else {
             delete clientFieldErrors.value.Title;
         }
     } else if (field === "description") {
-        const errors = TodoValidator.validateDescription(
-            newTodoDescription.value,
-        );
+        const errors = validateDescription(newTodoDescription.value);
         if (errors.length > 0) {
             clientFieldErrors.value.Description = errors.map((e) => e.message);
         } else {
@@ -117,7 +117,7 @@ const descriptionErrors = computed(() => {
 const handleCreateTodo = () => {
     touched.value = { title: true, description: true };
 
-    const result = TodoValidator.validate({
+    const result = validate({
         title: newTodoTitle.value,
         description: newTodoDescription.value,
     });
@@ -163,7 +163,7 @@ const handleToggleComplete = (id: string, completed: boolean) => {
                             @input="handleTitleInput"
                             @blur="handleTitleBlur"
                             type="text"
-                            :maxlength="TODO_VALIDATION.TITLE_MAX_LENGTH"
+                            :maxlength="todoValidation.TITLE_MAX_LENGTH"
                             class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors"
                             :class="
                                 titleErrors.length > 0
@@ -187,13 +187,13 @@ const handleToggleComplete = (id: string, completed: boolean) => {
                                 class="text-xs text-gray-500 ml-2"
                                 :class="
                                     newTodoTitle.length >
-                                    TODO_VALIDATION.TITLE_MAX_LENGTH * 0.9
+                                    todoValidation.TITLE_MAX_LENGTH * 0.9
                                         ? 'text-orange-500 font-medium'
                                         : ''
                                 "
                             >
                                 {{ newTodoTitle.length }} /
-                                {{ TODO_VALIDATION.TITLE_MAX_LENGTH }}
+                                {{ todoValidation.TITLE_MAX_LENGTH }}
                             </span>
                         </div>
                     </div>
@@ -211,7 +211,7 @@ const handleToggleComplete = (id: string, completed: boolean) => {
                             @input="handleDescriptionInput"
                             @blur="handleDescriptionBlur"
                             rows="3"
-                            :maxlength="TODO_VALIDATION.DESCRIPTION_MAX_LENGTH"
+                            :maxlength="todoValidation.DESCRIPTION_MAX_LENGTH"
                             class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors"
                             :class="
                                 descriptionErrors.length > 0
@@ -235,13 +235,13 @@ const handleToggleComplete = (id: string, completed: boolean) => {
                                 class="text-xs text-gray-500 ml-2"
                                 :class="
                                     newTodoDescription.length >
-                                    TODO_VALIDATION.DESCRIPTION_MAX_LENGTH * 0.9
+                                    todoValidation.DESCRIPTION_MAX_LENGTH * 0.9
                                         ? 'text-orange-500 font-medium'
                                         : ''
                                 "
                             >
                                 {{ newTodoDescription.length }} /
-                                {{ TODO_VALIDATION.DESCRIPTION_MAX_LENGTH }}
+                                {{ todoValidation.DESCRIPTION_MAX_LENGTH }}
                             </span>
                         </div>
                     </div>

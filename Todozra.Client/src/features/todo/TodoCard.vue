@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Todo } from "../api/todos";
 import { computed } from "vue";
+import type { Todo } from "./types";
 
 interface Props {
     todo: Todo;
@@ -30,7 +30,7 @@ const handleToggle = () => {
             <button
                 @click="handleToggle"
                 :disabled="loading"
-                class="mt-1 flex-shrink-0 w-5 h-5 rounded border-2 transition-colors duration-150"
+                class="mt-1 shrink-0 w-5 h-5 rounded border-2 transition-colors duration-150"
                 :class="
                     isCompleted
                         ? 'bg-green-500 border-green-500'
