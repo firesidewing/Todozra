@@ -15,8 +15,9 @@ file sealed class EndPoint : IEndPoint
     private static async Task<Results<Ok<TodoDto>, NotFound>> Handler(TodoDbContext context, Guid id)
     {
         var todo = await context.Todos
+            .Where(x => x.Id == id)
             .Select(x => x.ToDto())
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .FirstOrDefaultAsync();
 
         if (todo == null)
         {

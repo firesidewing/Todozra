@@ -1,0 +1,34 @@
+### Variables
+@baseUrl = http://localhost:5202
+@todoId = b2ffa805-2598-4d8c-83ad-2ba954e033cc
+
+### List all todos
+GET {{baseUrl}}/api/todos
+
+### Get todo by ID
+GET {{baseUrl}}/api/todos/{{todoId}}
+
+### Create new todo
+POST {{baseUrl}}/api/todos
+Content-Type: application/json
+
+{
+  "title": "My new todo",
+  "description": "This is a test todo"
+}
+
+### Update todo
+POST {{baseUrl}}/api/todos/{{todoId}}
+Content-Type: application/json
+
+{
+  "title": "Updated todo title",
+  "description": "Updated description",
+  "completedAt": null
+}
+
+### Toggle priority
+POST {{baseUrl}}/api/todos/{{todoId}}/priority
+
+### Delete todo
+DELETE {{baseUrl}}/api/todos/{{todoId}}
