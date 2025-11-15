@@ -29,19 +29,21 @@ file sealed class EndPoint : IEndPoint
     private static async Task<Results<Ok<TodoDto>, NotFound, ValidationProblem>> Handler(TodoDbContext db, Guid id, [FromBody] Request request)
     {
         var todo = await db.Todos.FirstOrDefaultAsync(x => x.Id == id);
-
         if (todo == null)
         {
             return TypedResults.NotFound();
         }
 
-        var errors = request.Apply(todo).Validate();
+        var errors = request
+            .Apply(todo)
+            .Validate();
         if (errors.Count > 0)
         {
             return TypedResults.ValidationProblem(errors.ToValidationErrors());
         }
 
-        db.Todos.Update(request.Apply(todo));
+        todo.UpdatedAt = DateTime.UtcNow;
+        db.Todos.Update(todo);
         await db.SaveChangesAsync();
 
         return TypedResults.Ok(todo.ToDto());

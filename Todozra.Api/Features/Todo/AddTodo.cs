@@ -29,6 +29,7 @@ file sealed class EndPoint : IEndPoint
     {
         var todo = request.ToModel();
         todo.CreatedAt = DateTime.UtcNow;
+        todo.UpdatedAt = DateTime.UtcNow;
 
         var errors = todo.Validate();
         if (errors.Count > 0)

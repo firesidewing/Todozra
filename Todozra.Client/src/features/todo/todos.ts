@@ -94,4 +94,13 @@ export const todosApi = {
     });
     return handleResponse<Todo>(response);
   },
+
+  async delete(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to delete todo: ${response.statusText}`);
+    }
+  },
 };

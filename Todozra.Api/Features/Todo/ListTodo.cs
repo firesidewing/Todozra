@@ -15,6 +15,7 @@ file sealed class EndPoint : IEndPoint
     private static async Task<Ok<List<TodoDto>>> Handler(TodoDbContext db)
     {
         var ret = await db.Todos
+            .Where(x => x.DeletedAt == null)
             .Select(x => x.ToDto())
             .ToListAsync();
 
