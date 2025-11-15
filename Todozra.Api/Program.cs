@@ -40,6 +40,8 @@ builder.Services.AddDbContext<TodoDbContext>(options =>
 
 builder.Services.AddEndpoints(typeof(IEndPoint).Assembly);
 
+builder.Services.AddProblemDetails();
+
 builder.Services.AddControllers();
 
 builder.Services.AddCors(options =>
@@ -54,6 +56,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
