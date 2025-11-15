@@ -103,4 +103,11 @@ export const todosApi = {
       throw new Error(`Failed to delete todo: ${response.statusText}`);
     }
   },
+
+  async togglePriority(id: string): Promise<Todo> {
+    const response = await fetch(`${API_BASE}/${id}/priority`, {
+      method: "POST",
+    });
+    return handleResponse<Todo>(response);
+  },
 };

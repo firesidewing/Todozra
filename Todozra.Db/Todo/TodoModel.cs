@@ -6,6 +6,7 @@ public sealed class TodoModel
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
 
+    public bool IsPriority { get; set; }
     public DateTime? CompletedAt { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

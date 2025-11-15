@@ -2,6 +2,7 @@ export interface Todo {
   id: string;
   title: string;
   description: string | null;
+  isPriority: boolean;
   completedAt: string | null;
   createdAt: string;
 }

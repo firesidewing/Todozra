@@ -180,6 +180,17 @@ const handleDelete = (id: string) => {
     deleteMutation.mutate(id);
 };
 
+const priorityMutation = useMutation({
+    mutationFn: todosApi.togglePriority,
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["todos"] });
+    },
+});
+
+const handleTogglePriority = (id: string) => {
+    priorityMutation.mutate(id);
+};
+
 // Filter/Search/Sort state
 const searchQuery = ref("");
 const filterStatus = ref<"all" | "active" | "completed">("all");
@@ -207,16 +218,22 @@ const filteredAndSortedTodos = computed(() => {
         result = result.filter((todo) => !!todo.completedAt);
     }
 
-    // Sort
-    if (sortBy.value === "title") {
-        result.sort((a, b) => a.title.localeCompare(b.title));
-    } else {
-        result.sort(
-            (a, b) =>
+    // Sort by priority first, then by selected sort order
+    result.sort((a, b) => {
+        // Priority todos always come first
+        if (a.isPriority && !b.isPriority) return -1;
+        if (!a.isPriority && b.isPriority) return 1;
+
+        // If both have same priority status, sort by selected order
+        if (sortBy.value === "title") {
+            return a.title.localeCompare(b.title);
+        } else {
+            return (
                 new Date(b.createdAt).getTime() -
-                new Date(a.createdAt).getTime(),
-        );
-    }
+                new Date(a.createdAt).getTime()
+            );
+        }
+    });
 
     return result;
 });
@@ -458,10 +475,12 @@ const todoCounts = computed(() => {
                     :key="todo.id"
                     :todo="todo"
                     :on-toggle-complete="handleToggleComplete"
+                    :on-toggle-priority="handleTogglePriority"
                     :on-edit="handleEdit"
                     :on-delete="handleDelete"
                     :loading="
                         updateMutation.isPending.value ||
+                        priorityMutation.isPending.value ||
                         editMutation.isPending.value ||
                         deleteMutation.isPending.value
                     "
