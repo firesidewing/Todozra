@@ -1,4 +1,7 @@
+using Azure.Monitor.OpenTelemetry.Exporter;
+
 using Microsoft.EntityFrameworkCore;
+
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -14,13 +17,11 @@ const string serviceName = "Todozra.Api";
 builder.Logging.AddOpenTelemetry(options =>
 {
     options
-        .SetResourceBuilder(
-            ResourceBuilder.CreateDefault()
-                .AddService(serviceName))
+        .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
         .AddOtlpExporter();
 });
 
-builder.Services.AddOpenTelemetry()
+var openTel = builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService(serviceName))
     .WithTracing(tracing => tracing
         .AddAspNetCoreInstrumentation()
@@ -32,6 +33,12 @@ builder.Services.AddOpenTelemetry()
         .AddHttpClientInstrumentation()
         .AddOtlpExporter());
 
+if (builder.Environment.IsProduction() &&
+    !string.IsNullOrEmpty(builder.Configuration.GetValue<string?>("APPLICATIONINSIGHTS_CONNECTION_STRING")))
+{
+    openTel.UseAzureMonitorExporter();
+}
+
 builder.Services.AddDbContext<TodoDbContext>(options =>
 {
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
@@ -41,18 +48,18 @@ builder.Services.AddDbContext<TodoDbContext>(options =>
 builder.Services.AddEndpoints(typeof(IEndPoint).Assembly);
 
 builder.Services.AddProblemDetails();
-
 builder.Services.AddControllers();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("DevCors", policy =>
-    {
-        policy
-            .WithOrigins("http://localhost:5173")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
+    options.AddPolicy("DevCors",
+        policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:5173")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
 });
 
 var app = builder.Build();
