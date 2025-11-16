@@ -25,7 +25,6 @@ ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./Todozra.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 # Frontend build stage (Vue + Bun)
-# Adjust the path "Todozra.Client" to your actual frontend folder name
 FROM oven/bun:1 AS frontend-build
 WORKDIR /src
 
@@ -38,6 +37,8 @@ COPY Todozra.Client ./Todozra.Client
 WORKDIR /src/Todozra.Client
 RUN bun install
 ENV DOCKER_BUILD=true
+# Clear Bun cache to ensure fresh build
+RUN rm -rf node_modules/.vite node_modules/.cache dist
 RUN bun run build
 
 # Final runtime image
@@ -48,7 +49,6 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 
 # Copy frontend build output into wwwroot (served by ASP.NET)
-# If your Vite outDir is different, adjust this path.
 COPY --from=frontend-build /src/Todozra.Client/dist ./wwwroot
 
 ENTRYPOINT ["dotnet", "Todozra.Api.dll"]

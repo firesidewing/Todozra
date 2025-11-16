@@ -8,8 +8,6 @@
     container_name: todozra-web
     ports:
       - "8080:8080"
-    volumes:
-      - todozra-data:/app
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
