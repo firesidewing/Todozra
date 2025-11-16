@@ -119,3 +119,5 @@ Api endpoints can be tested using the provided api.http file.
 - Playwright testing could be added to test frontend functionality.
 - Will need to add tests for backend functionality once business logic becomes more complex.
 - Feature set is limited, local first would improve UX, maybe with CRDTs and a sync server.
+- Design could be more cohesive, actually set up real themes and colors without hardcoding colours. Get a real favicon.
+- CDN for frontend assets could be added for better performance.

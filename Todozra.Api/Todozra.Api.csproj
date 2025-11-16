@@ -31,4 +31,15 @@
       <ProjectReference Include="..\Todozra.Db\Todozra.Db.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="wwwroot\assets\index-B4eI_357.css" />
+      <_ContentIncludedByDefault Remove="wwwroot\assets\index-BOA4q1cH.css" />
+      <_ContentIncludedByDefault Remove="wwwroot\assets\index-Dx7hqxFe.js" />
+      <_ContentIncludedByDefault Remove="wwwroot\assets\index-zqii_vj2.js" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="wwwroot\" />
+    </ItemGroup>
+
 </Project>

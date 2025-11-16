@@ -50,6 +50,12 @@ const editMutation = useMutation({
     },
     onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["todos"] });
+        editServerFieldErrors.value = {};
+    },
+    onError: (err: unknown) => {
+        if (isTodoValidationError(err)) {
+            editServerFieldErrors.value = err.fieldErrors;
+        }
     },
 });
 
@@ -64,6 +70,7 @@ const isDrawerOpen = ref(false);
 const todoFormRefDesktop = ref<InstanceType<typeof TodoForm>>();
 const todoFormRefDrawer = ref<InstanceType<typeof TodoForm>>();
 const serverFieldErrors = ref<Record<string, string[]>>({});
+const editServerFieldErrors = ref<Record<string, string[]>>({});
 
 const createMutation = useMutation({
     mutationFn: todosApi.create,
@@ -306,6 +313,7 @@ const closeDrawer = () => {
                         editMutation.isPending.value ||
                         deleteMutation.isPending.value
                     "
+                    :edit-server-field-errors="editServerFieldErrors"
                 />
             </div>
 

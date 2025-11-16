@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import {
     validateTitle,
     validateDescription,
@@ -11,14 +11,34 @@ interface Props {
     onSubmit: (title: string, description: string | undefined) => void;
     isPending?: boolean;
     serverFieldErrors?: Record<string, string[]>;
+    mode?: "create" | "edit";
+    initialTitle?: string;
+    initialDescription?: string | null;
+    submitButtonText?: string;
+    onCancel?: () => void;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    mode: "create",
+    initialTitle: "",
+    initialDescription: "",
+    submitButtonText: undefined,
+});
 
-const newTodoTitle = ref("");
-const newTodoDescription = ref("");
+const newTodoTitle = ref(props.initialTitle);
+const newTodoDescription = ref(props.initialDescription || "");
 const touched = ref({ title: false, description: false });
 const clientFieldErrors = ref<Record<string, string[]>>({});
+
+watch(
+    () => [props.initialTitle, props.initialDescription],
+    ([title, description]) => {
+        if (props.mode === "edit") {
+            newTodoTitle.value = title || "";
+            newTodoDescription.value = description || "";
+        }
+    },
+);
 
 const validateField = (field: "title" | "description") => {
     if (field === "title") {
@@ -201,12 +221,30 @@ defineExpose({ reset });
             </div>
         </div>
 
-        <button
-            type="submit"
-            :disabled="isPending"
-            class="w-full px-6 py-2 bg-[#5C7F67] text-white font-medium rounded-md hover:bg-[#87C7A1] focus:outline-none focus:ring-2 focus:ring-[#87C7A1] focus:ring-offset-2 focus:ring-offset-[#1C1917] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
-        >
-            {{ isPending ? "Adding..." : "Add Todo" }}
-        </button>
+        <div :class="mode === 'edit' ? 'flex gap-2 justify-end' : ''">
+            <button
+                v-if="mode === 'edit' && onCancel"
+                type="button"
+                @click="onCancel"
+                class="px-4 py-2 bg-[#292524] text-[#E7E5E4] rounded-md hover:bg-[#3F3C38] transition-colors duration-150"
+            >
+                Cancel
+            </button>
+            <button
+                type="submit"
+                :disabled="isPending"
+                :class="mode === 'edit' ? 'px-4 py-2' : 'w-full px-6 py-2'"
+                class="bg-[#5C7F67] text-white font-medium rounded-md hover:bg-[#87C7A1] focus:outline-none focus:ring-2 focus:ring-[#87C7A1] focus:ring-offset-2 focus:ring-offset-[#1C1917] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+            >
+                {{
+                    isPending
+                        ? mode === "edit"
+                            ? "Saving..."
+                            : "Adding..."
+                        : submitButtonText ||
+                          (mode === "edit" ? "Save" : "Add Todo")
+                }}
+            </button>
+        </div>
     </form>
 </template>

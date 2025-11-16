@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import type { Todo } from "./types";
+import TodoForm from "./TodoForm.vue";
 
 interface Props {
     todo: Todo;
@@ -13,14 +14,13 @@ interface Props {
     ) => void;
     onDelete: (id: string) => void;
     loading?: boolean;
+    editServerFieldErrors?: Record<string, string[]>;
 }
 
 const props = defineProps<Props>();
 
 const isCompleted = computed(() => !!props.todo.completedAt);
 const isEditing = ref(false);
-const editTitle = ref(props.todo.title);
-const editDescription = ref(props.todo.description || "");
 
 const formattedDate = computed(() => {
     return new Date(props.todo.createdAt).toLocaleDateString();
@@ -31,26 +31,17 @@ const handleToggle = () => {
 };
 
 const startEdit = () => {
+    console.log(isEditing);
     isEditing.value = true;
-    editTitle.value = props.todo.title;
-    editDescription.value = props.todo.description || "";
 };
 
 const cancelEdit = () => {
     isEditing.value = false;
-    editTitle.value = props.todo.title;
-    editDescription.value = props.todo.description || "";
 };
 
-const saveEdit = () => {
-    if (editTitle.value.trim()) {
-        props.onEdit(
-            props.todo.id,
-            editTitle.value.trim(),
-            editDescription.value.trim() || undefined,
-        );
-        isEditing.value = false;
-    }
+const handleEditSubmit = (title: string, description: string | undefined) => {
+    props.onEdit(props.todo.id, title, description);
+    isEditing.value = false;
 };
 
 const handleDelete = () => {
@@ -126,7 +117,11 @@ const handleTogglePriority = () => {
                             ? 'text-[#F59E0B] hover:bg-[#292524]'
                             : 'text-[#78716C] hover:text-[#F59E0B] hover:bg-[#292524]'
                     "
-                    :title="todo.isPriority ? 'Remove from priority' : 'Mark as priority'"
+                    :title="
+                        todo.isPriority
+                            ? 'Remove from priority'
+                            : 'Mark as priority'
+                    "
                 >
                     <svg
                         class="w-4 h-4"
@@ -185,34 +180,16 @@ const handleTogglePriority = () => {
             </div>
         </div>
 
-        <div v-else class="space-y-3">
-            <input
-                v-model="editTitle"
-                type="text"
-                class="w-full px-3 py-2 bg-[#292524] border border-[#57534E] rounded-md text-[#E7E5E4] placeholder-[#78716C] focus:outline-none focus:ring-2 focus:ring-[#87C7A1] focus:border-transparent"
-                placeholder="Title"
+        <div v-else>
+            <TodoForm
+                mode="edit"
+                :initial-title="todo.title"
+                :initial-description="todo.description"
+                :on-submit="handleEditSubmit"
+                :on-cancel="cancelEdit"
+                :is-pending="loading"
+                :server-field-errors="editServerFieldErrors"
             />
-            <textarea
-                v-model="editDescription"
-                rows="3"
-                class="w-full px-3 py-2 bg-[#292524] border border-[#57534E] rounded-md text-[#E7E5E4] placeholder-[#78716C] focus:outline-none focus:ring-2 focus:ring-[#87C7A1] focus:border-transparent"
-                placeholder="Description"
-            />
-            <div class="flex gap-2 justify-end">
-                <button
-                    @click="cancelEdit"
-                    class="px-4 py-2 bg-[#292524] text-[#E7E5E4] rounded-md hover:bg-[#3F3C38] transition-colors duration-150"
-                >
-                    Cancel
-                </button>
-                <button
-                    @click="saveEdit"
-                    :disabled="!editTitle.trim()"
-                    class="px-4 py-2 bg-[#5C7F67] text-white rounded-md hover:bg-[#87C7A1] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
-                >
-                    Save
-                </button>
-            </div>
         </div>
     </div>
 </template>
